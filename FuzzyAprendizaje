@@ -1,0 +1,60 @@
+import numpy as np
+import skfuzzy as fuzz
+import matplotlib.pyplot as plt
+from skfuzzy import control as ctrl
+
+# Definición de las variables de entrada y salida
+promedio_calificaciones = ctrl.Antecedent(np.arange(0, 21, 1), 'promedio_calificaciones')
+horas_estudio = ctrl.Antecedent(np.arange(0, 9, 1), 'horas_estudio')  # Rango ajustado para las horas de estudio
+recomendacion = ctrl.Consequent(np.arange(0, 101, 1), 'recomendacion')
+
+# Definición de las funciones de membresía para el promedio de calificaciones
+promedio_calificaciones['muy_bajo'] = fuzz.trapmf(promedio_calificaciones.universe, [0, 0, 4, 6])
+promedio_calificaciones['bajo'] = fuzz.trapmf(promedio_calificaciones.universe, [4, 6, 8, 10])
+promedio_calificaciones['promedio'] = fuzz.trapmf(promedio_calificaciones.universe, [8, 10, 12, 14])
+promedio_calificaciones['alto'] = fuzz.trapmf(promedio_calificaciones.universe, [12, 14, 16, 18])
+promedio_calificaciones['muy_alto'] = fuzz.trapmf(promedio_calificaciones.universe, [16, 18, 20, 20])
+
+# Definición de las funciones de membresía para las horas de estudio
+horas_estudio['muy_bajo'] = fuzz.trapmf(horas_estudio.universe, [0, 0, 1, 2])
+horas_estudio['medio'] = fuzz.trapmf(horas_estudio.universe, [1, 2, 4, 6])
+horas_estudio['muy_alto'] = fuzz.trapmf(horas_estudio.universe, [4, 6, 8, 8])
+
+# Definición de las funciones de membresía para la recomendación
+recomendacion['refuerzo'] = fuzz.trimf(recomendacion.universe, [0, 0, 50])
+recomendacion['apoyo'] = fuzz.trimf(recomendacion.universe, [0, 50, 100])
+recomendacion['excelencia'] = fuzz.trimf(recomendacion.universe, [50, 100, 100])
+
+# Reglas difusas
+regla1 = ctrl.Rule(promedio_calificaciones['muy_bajo'] | horas_estudio['muy_bajo'], recomendacion['refuerzo'])
+regla2 = ctrl.Rule(promedio_calificaciones['bajo'] & horas_estudio['medio'], recomendacion['apoyo'])
+regla3 = ctrl.Rule(promedio_calificaciones['promedio'] & horas_estudio['muy_alto'], recomendacion['apoyo'])
+regla4 = ctrl.Rule((promedio_calificaciones['alto'] | promedio_calificaciones['muy_alto']) & horas_estudio['muy_alto'], recomendacion['excelencia'])
+regla5 = ctrl.Rule(promedio_calificaciones['muy_bajo'] & horas_estudio['muy_alto'], recomendacion['apoyo'])
+regla6 = ctrl.Rule(promedio_calificaciones['muy_alto'] & horas_estudio['muy_bajo'], recomendacion['refuerzo'])
+regla7 = ctrl.Rule(promedio_calificaciones['bajo'] & horas_estudio['muy_bajo'], recomendacion['refuerzo'])
+regla8 = ctrl.Rule(promedio_calificaciones['promedio'] & horas_estudio['medio'], recomendacion['excelencia'])
+regla9 = ctrl.Rule(promedio_calificaciones['muy_bajo'] & horas_estudio['medio'], recomendacion['apoyo'])
+regla10 = ctrl.Rule(promedio_calificaciones['alto'] & horas_estudio['muy_alto'], recomendacion['excelencia'])
+
+# Sistema de control difuso
+sistema_recomendacion = ctrl.ControlSystem([regla1, regla2, regla3, regla4, regla5, regla6, regla7, regla8, regla9, regla10])
+recomendacion_ctrl = ctrl.ControlSystemSimulation(sistema_recomendacion)
+
+# Entrada de ejemplo
+recomendacion_ctrl.input['promedio_calificaciones'] = 10
+recomendacion_ctrl.input['horas_estudio'] = 3
+
+# Evaluación del sistema
+recomendacion_ctrl.compute()
+
+# Resultado
+print("Recomendación:", recomendacion_ctrl.output['recomendacion'])
+
+# Visualización de las funciones de membresía
+promedio_calificaciones.view()
+horas_estudio.view()
+recomendacion.view(sim=recomendacion_ctrl)
+
+# Mostrar los gráficos
+plt.show()
